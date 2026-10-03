@@ -1,6 +1,6 @@
 {
   "name": "usage-band",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Always-visible usage rings and time until reset above the prompt",
   "author": { "name": "MaeharaTakumi" },
   "types": "./types/index.d.ts"

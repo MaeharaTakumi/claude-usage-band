@@ -43,25 +43,37 @@ const ring = (percent: number) => {
 
 export const register: Register = on => {
   on('session.start', async ($, e, next) => {
+    // Fresh sessions have no rate-limit data until the first response, so fall back to the last saved values.
     const usage = await $.session.usage()
-    await $.state.set(limits, usage.rateLimits as Limit[])
+    const saved = (await $.store.get('limits')) as Limit[] | undefined
+    const initial = usage.rateLimits.length > 0 ? (usage.rateLimits as Limit[]) : (saved ?? [])
+    await $.state.set(limits, initial)
     return next(e)
   })
 
   on('session.measure', async ($, e, next) => {
     await $.state.set(limits, e.rateLimits as Limit[])
+    if (e.rateLimits.length > 0) await $.store.set('limits', e.rateLimits as Limit[])
     return next(e)
   })
 
   on('ui.render', { component: 'AbovePrompt' }, async ($, e, next) => {
-    const { value = [] } = await $.state.get(limits)
-    if (value.length === 0) return next(e)
+    const { value: stored = [] } = await $.state.get(limits)
+    if (stored.length === 0) return next(e)
     const t = await $.clock.now()
+    // A window whose reset time has passed starts over: show 0% and no countdown until fresh data arrives.
+    const value = stored.map(l =>
+      l.resetsAt && Date.parse(l.resetsAt) <= t ? { kind: l.kind, percentUsed: 0 } : l,
+    )
     const ja = true
     const names = ja ? NAMES.ja : NAMES.en
     const label = (l: Limit) => names[l.kind] ?? l.kind
     const reset = (l: Limit) =>
-      ja ? `リセットまで ${remaining(l.resetsAt, t, true)}` : `reset in ${remaining(l.resetsAt, t, false)}`
+      !l.resetsAt
+        ? ''
+        : ja
+          ? `リセットまで ${remaining(l.resetsAt, t, true)}`
+          : `reset in ${remaining(l.resetsAt, t, false)}`
     const ui = $.ui.resolve(e)
     const { Box, Text } = ui
 
