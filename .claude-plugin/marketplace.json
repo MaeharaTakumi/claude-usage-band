@@ -1,0 +1,11 @@
+{
+  "name": "usage-band-marketplace",
+  "owner": { "name": "MaeharaTakumi" },
+  "plugins": [
+    {
+      "name": "usage-band",
+      "source": "./plugins/usage-band",
+      "description": "Always-visible usage rings and time until reset above the prompt"
+    }
+  ]
+}
